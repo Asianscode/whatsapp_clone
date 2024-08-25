@@ -183,8 +183,7 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-#SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '1424099745021-4ptvd7rpqttgppgp2qd9vg7jfe1l0st4.apps.googleusercontent.com'
-#SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '1GOCSPX-vAUsPQc6ejlU0xt7lycSiH2A4h4i'
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/

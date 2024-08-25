@@ -1,0 +1,338 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Application</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .main-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        .chat-area {
+            flex-grow: 1;
+            background-color: #333;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+        }
+        .chat-header {
+            background-color: #444;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .profile-picture {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #555;
+            margin-right: 15px;
+        }
+        .call-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .call-buttons i {
+            font-size: 24px;
+            color: #ffffff;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .call-buttons i:hover {
+            color: #007bff;
+        }
+        .message-box {
+            background-color: #444;
+            border-radius: 30px;
+            color: #ffffff;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            margin-top: auto;
+        }
+        .message-box input {
+            border: none;
+            background: transparent;
+            color: #ffffff;
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 20px;
+        }
+        .send-button, .media-button {
+            font-size: 24px;
+            color: #ffffff;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: color 0.3s;
+        }
+        .send-button:hover, .media-button:hover {
+            color: #007bff;
+        }
+        @media (max-width: 768px) {
+            .chat-area {
+                padding: 15px;
+                width: 70%;
+            }
+            .chat-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .call-buttons {
+                margin-top: 10px;
+            }
+    
+            .media-gallery {
+            margin-top: 15px;
+        }
+        .media-gallery img, .media-gallery video {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .file-input {
+            margin-top: 10px;
+        }
+    }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        {% include 'contacts/sidebar.html' %}
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="profile-picture">
+                    
+                </div>
+                <div class="username">Username</div>
+                <div class="call-buttons">
+                    <i class="fas fa-phone-alt" id="call-btn"></i>
+                    <i class="fas fa-video" id="video-btn"></i>
+                </div>
+            </div>
+            <div class="message-box">
+                <input type="text" placeholder="Type a message..." id="message-input">
+                <button id="record-btn">Record</button>
+                <button id="stop-btn" disabled>Stop</button>
+                <audio id="audio-playback" controls></audio>
+                <input type="file" id="file-input" class="file-input" accept="image/*,video/*">
+                <i class="fas fa-paperclip media-button"></i>
+                <i class="fas fa-paper-plane send-button" id="send-btn"></i>
+            </div>
+            <div class="media-gallery" id="media-gallery">
+                <!-- Media items will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+    <script>
+        // JavaScript for text messaging
+        document.getElementById('send-btn').addEventListener('click', function() {
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value;
+            if (message.trim()) {
+                console.log('Sending message:', message);
+
+                const ws = new WebSocket('ws://localhost:8000/ws/chat/');
+                ws.onopen = function() {
+                    ws.send(JSON.stringify({
+                        type: 'text_message',
+                        message: message
+                    }));
+                    messageInput.value = ''; // Clear the input
+                };
+            }
+        });
+
+        // JavaScript for voice recording
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById('record-btn').addEventListener('click', async function() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = function(event) {
+                    audioChunks.push(event.data);
+                };
+                mediaRecorder.onstop = function() {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    document.getElementById('audio-playback').src = audioUrl;
+                    audioChunks = [];
+
+                    const ws = new WebSocket('ws://localhost:8000/ws/chat/');
+                    ws.onopen = function() {
+                        const reader = new FileReader();
+                        reader.onloadend = function() {
+                            ws.send(JSON.stringify({
+                                type: 'audio_message',
+                                audio: reader.result
+                            }));
+                        };
+                        reader.readAsDataURL(audioBlob);
+                    };
+                };
+                mediaRecorder.start();
+                document.getElementById('record-btn').disabled = true;
+                document.getElementById('stop-btn').disabled = false;
+            } catch (error) {
+                console.error('Error accessing media devices.', error);
+            }
+        });
+
+        document.getElementById('stop-btn').addEventListener('click', function() {
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+            }
+            document.getElementById('record-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+        });
+
+        // JavaScript for handling file uploads
+        document.getElementById('file-input').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    const mediaGallery = document.getElementById('media-gallery');
+                    let mediaElement;
+
+                    if (file.type.startsWith('image/')) {
+                        mediaElement = document.createElement('img');
+                        mediaElement.src = reader.result;
+                        mediaElement.alt = 'Image';
+                    } else if (file.type.startsWith('video/')) {
+                        mediaElement = document.createElement('video');
+                        mediaElement.src = reader.result;
+                        mediaElement.controls = true;
+                    } else {
+                        console.log('Unsupported media type:', file.type);
+                        return;
+                    }
+
+                    mediaElement.style.maxWidth = '100%';
+                    mediaGallery.appendChild(mediaElement);
+
+                    const ws = new WebSocket('ws://localhost:8000/ws/chat/');
+                    ws.onopen = function() {
+                        ws.send(JSON.stringify({
+                            type: 'media_message',
+                            mediaType: file.type.startsWith('image/') ? 'image' : 'video',
+                            mediaUrl: reader.result
+                        }));
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // WebRTC Initialization
+        const signalingServer = new WebSocket('ws://localhost:8000/ws/signaling/');
+        const configuration = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        };
+        let peerConnection;
+
+        navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+            .then(stream => {
+                const localVideo = document.getElementById('localVideo');
+                localVideo.srcObject = stream;
+                stream.getTracks().forEach(track => {
+                    if (peerConnection) {
+                        peerConnection.addTrack(track, stream);
+                    }
+                });
+            })
+            .catch(error => console.error('Error accessing media devices.', error));
+
+        signalingServer.onmessage = async message => {
+            const data = JSON.parse(message.data);
+            if (data.type === 'offer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                signalingServer.send(JSON.stringify({ type: 'answer', answer }));
+            } else if (data.type === 'answer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            } else if (data.type === 'candidate') {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+        };
+
+        signalingServer.onopen = () => {
+            // Handle WebSocket connection open event if needed
+        };
+
+        const handleIceCandidate = event => {
+            if (event.candidate) {
+                signalingServer.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
+            }
+        };
+
+        const handleTrackEvent = event => {
+            const remoteVideo = document.getElementById('remoteVideo');
+            remoteVideo.srcObject = event.streams[0];
+        };
+        function startCall(callType, profilePicUrl) {
+        window.location.href = `calls.html?type=${callType}&profilePicUrl=${encodeURIComponent(profilePicUrl)}`;}
+
+        document.getElementById('call-btn').addEventListener('click', async () => {
+            startCall('audio', 'media/contact_pics');
+            peerConnection = new RTCPeerConnection(configuration);
+            peerConnection.onicecandidate = handleIceCandidate;
+            peerConnection.ontrack = handleTrackEvent;
+            window.location.href = 'calls.html?callType=audio';
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            signalingServer.send(JSON.stringify({ type: 'offer', offer }));
+        });
+
+        document.getElementById('video-btn').addEventListener('click', async () => {
+            startCall('video');
+            peerConnection = new RTCPeerConnection(configuration);
+            peerConnection.onicecandidate = handleIceCandidate;
+            peerConnection.ontrack = handleTrackEvent;
+            window.location.href = 'calls.html?callType=video';
+
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const localVideo = document.getElementById('localVideo');
+            localVideo.srcObject = stream;
+            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            signalingServer.send(JSON.stringify({ type: 'offer', offer }));
+        });
+
+        document.getElementById('end-call-btn').addEventListener('click', () => {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            const localVideo = document.getElementById('localVideo');
+            const remoteVideo = document.getElementById('remoteVideo');
+            localVideo.srcObject = null;
+            remoteVideo.srcObject = null;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <style>
+        body {
+            background-color: #e9ecef;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        .sign-in-container {
+            max-width: 360px;
+            width: 100%;
+            padding: 30px;
+            background-color: #1f1a1a;
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        .sign-in-container h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #e8e8e8;
+        }
+        .btn-google, .btn-primary {
+            background-color: #007bff;
+            color: white;
+            font-size: 16px;
+            padding: 12px;
+            border-radius: 50px;
+            border: none;
+            max-width: 200px;
+            transition: background-color 0.3s ease;
+            display: block;
+            margin: 10px auto; /* Centers the button horizontally */
+        }
+        .btn-google {
+            background-color: #1c66b6;
+        }
+        .btn-google:hover {
+            background-color: white;
+            color: #1c66b6;
+        }
+        .btn-google img {
+            margin-right: 10px;
+            width: 20px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #ffffff;
+            color: #0056b3;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group input {
+            border-radius: 30px;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 1px solid #ced4da;
+            width: calc(100% - 30px); /* Adjust width to account for padding */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: border-color 0.3s, box-shadow 0.3s;
+            background-color: #ffffff;
+            color: #333;
+        }
+        .form-group input::placeholder {
+            color: #6c757d;
+        }
+        .form-group input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+            outline: none;
+        }
+        hr {
+            border-top: 1px solid #dee2e6;
+            margin: 20px 0;
+        }
+        a {
+            color: #007bff;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="sign-in-container">
+        <h2>Sign In</h2>
+        <form method="post" action="{% url 'account_login' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ form.username.label_tag }}<br>
+                {{ form.username }}
+            </div>
+            <div class="form-group">
+                {{ form.password.label_tag }}<br>
+                {{ form.password }}
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+            </div>
+        </form>
+        <hr>
+        <div class="text-center">
+            <p>Or sign in with:</p>
+            <a href="{% provider_login_url 'google' %}" class="btn btn-google">
+                <img src="{% static 'media/google.png' %}" alt="Google"> Google
+            </a>
+        </div>
+        <hr>
+        <div class="text-center">
+            <p>Don't have an account? <a href="{% url 'register' %}">Sign up here</a>.</p>
+        </div>
+    </div>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>
+            {% block head_title %}
+            {% endblock head_title %}
+        </title>
+        {% block extra_head %}
+        {% endblock extra_head %}
+    </head>
+    <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0;">
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+            {% block body %}
+                {% if messages %}
+                    <div style="padding: 10px; border-radius: 4px; background-color: #f8d7da; color: #721c24;">
+                        <strong>{% trans "Messages:" %}</strong>
+                        <ul>
+                            {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                <div style="padding: 20px;">
+                    <strong>{% trans "Menu:" %}</strong>
+                    <ul style="list-style: none; padding: 0;">
+                        {% if user.is_authenticated %}
+                            {% url 'account_email' as email_url %}
+                            {% if email_url %}
+                                <li style="margin-bottom: 10px;">
+                                    <a href="{{ email_url }}" style="text-decoration: none; color: #007bff;">{% trans "Change Email" %}</a>
+                                </li>
+                            {% endif %}
+                            {% url 'account_change_password' as change_password_url %}
+                            {% if change_password_url %}
+                                <li style="margin-bottom: 10px;">
+                                    <a href="{{ change_password_url }}" style="text-decoration: none; color: #007bff;">{% trans "Change Password" %}</a>
+                                </li>
+                            {% endif %}
+                            {% url 'socialaccount_connections' as connections_url %}
+                            {% if connections_url %}
+                                <li style="margin-bottom: 10px;">
+                                    <a href="{{ connections_url }}" style="text-decoration: none; color: #007bff;">{% trans "Account Connection" %}</a>
+                                </li>
+                            {% endif %}
+                            {% url 'mfa_index' as mfa_url %}
+                            {% if mfa_url %}
+                                <li style="margin-bottom: 10px;">
+                                    <a href="{{ mfa_url }}" style="text-decoration: none; color: #007bff;">{% trans "Two-Factor Authentication" %}</a>
+                                </li>
+                            {% endif %}
+                            {% url 'usersessions_list' as usersessions_list_url %}
+                            {% if usersessions_list_url %}
+                                <li style="margin-bottom: 10px;">
+                                    <a href="{{ usersessions_list_url }}" style="text-decoration: none; color: #007bff;">{% trans "Sessions" %}</a>
+                                </li>
+                            {% endif %}
+                            {% url 'account_logout' as logout_url %}
+                            {% if logout_url %}
+                                <li style="margin-bottom: 10px;">
+                                    <a href="{{ logout_url }}" style="text-decoration: none; color: #dc3545;">{% trans "Sign Out" %}</a>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            {% url 'account_login' as login_url %}
+                            {% if login_url %}
+                                <li style="margin-bottom: 10px;">
+                                    <a href="{{ login_url }}" style="text-decoration: none; color: #007bff;">{% trans "Sign In" %}</a>
+                                </li>
+                            {% endif %}
+                            {% url 'account_signup' as signup_url %}
+                            {% if signup_url %}
+                                <li style="margin-bottom: 10px;">
+                                    <a href="{{ signup_url }}" style="text-decoration: none; color: #007bff;">{% trans "Sign Up" %}</a>
+                                </li>
+                            {% endif %}
+                        {% endif %}
+                    </ul>
+                </div>
+                {% block content %}
+                {% endblock content %}
+            {% endblock body %}
+            {% block extra_body %}
+            {% endblock extra_body %}
+        </div>
+    </body>
+</html>

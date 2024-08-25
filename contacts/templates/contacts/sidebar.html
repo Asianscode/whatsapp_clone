@@ -1,0 +1,241 @@
+{% load static %}
+<!-- Sidebar HTML Content -->
+<div class="sidebar">
+    <div class="profile">
+        <i class="fas fa-user"></i>
+    </div>
+    <div class="add-contact" onclick="addContact()">
+        <i class="fas fa-user-plus"></i>
+    </div>
+    <div class="add-contact" onclick="deleteContact(selectedContactId)">
+        <i class="fa fa-trash" id="delete-icon"></i>
+    </div>
+    <div class="user-list">
+        <!-- List of users will be dynamically added here -->
+    </div>
+</div>
+
+<!-- Chat Area HTML Content -->
+<div class="chat-area">
+    <!-- Chat content will be dynamically loaded here -->
+</div>
+
+<!-- Inline CSS -->
+<style>
+    /* Sidebar Styles */
+    .sidebar {
+        width: 250px;
+        background-color: #2c2c2c;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 10px;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+        position: fixed; /* Fixed position to stay on the left side */
+        height: 100vh; /* Full viewport height */
+        overflow: hidden; /* Hide overflow to prevent scrolling issues */
+    }
+    .sidebar .profile, .sidebar .add-contact {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: #404040;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: background-color 0.3s, border 0.3s;
+    }
+    .sidebar .profile:hover, .sidebar .add-contact:hover {
+        background-color: #007bff; /* Blue color for hover effect */
+        border: 2px solid #0056b3; /* Darker blue for border */
+    }
+    .sidebar .profile i, .sidebar .add-contact i {
+        font-size: 24px;
+        color: #ffffff;
+    }
+    .user-list {
+        width: 100%;
+        height: calc(100% - 180px); /* Adjust height to fit other elements */
+        overflow-y: auto;
+        margin-top: 10px;
+    }
+    .user-item {
+        padding: 10px;
+        background-color: #3a3a3a;
+        color: #ffffff;
+        margin-bottom: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .user-item:hover {
+        background-color: #007bff;
+    }
+
+    /* Chat Area Styles */
+    .chat-area {
+        margin-left: 250px; /* Sidebar width */
+        padding: 20px;
+        background-color: #f0f0f0;
+        overflow-y: auto;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+        height: 100vh; /* Full viewport height */
+        position: relative; /* Position relative to the sidebar */
+    }
+</style>
+
+
+<!-- Inline JavaScript -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const userList = document.querySelector('.user-list');
+    const chatArea = document.querySelector('.chat-area');
+
+    // Function to add contacts
+    function addContact() {
+        const contactEmail = prompt("Enter the email of the contact you want to add:");
+
+        if (!contactEmail) {
+            alert("Email is required to add a contact.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('contact_email', contactEmail);
+
+        fetch("{% url 'add_contact' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert("Contact added successfully!");
+                // Optionally update the contact list on the page
+                fetchContacts();
+            } else if (data.status === 'invite') {
+                if (confirm(data.message)) {
+                    // Handle invitation process
+                    alert("Invitation sent to " + data.invite_email);
+                }
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("An error occurred while adding the contact.");
+        });
+    }
+
+    // Function to delete contacts
+    function deleteContact(contactId) {
+        if (!confirm("Are you sure you want to delete this contact?")) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('id', contactId);
+
+        fetch("{% url 'remove_contact' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert("Contact deleted successfully!");
+                // Remove the contact from the UI
+                const contactElement = document.getElementById("contact-" + contactId);
+                if (contactElement) {
+                    contactElement.remove();
+                }
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("An error occurred while deleting the contact.");
+        });
+    }
+
+    // Function to fetch contacts from the server
+    async function fetchContacts() {
+        try {
+            const response = await fetch('/api/contacts/'); // Replace with your API endpoint
+            if (!response.ok) {
+                throw new Error('Failed to fetch contacts');
+            }
+            const contacts = await response.json();
+            populateUserList(contacts);
+        } catch (error) {
+            console.error('Error:', error);
+            alert("An error occurred while fetching contacts.");
+        }
+    }
+
+    // Function to populate the user list
+    function populateUserList(users) {
+        userList.innerHTML = ''; // Clear existing users
+        users.forEach(user => {
+            const userElement = document.createElement('div');
+            userElement.textContent = user.name; // Assuming 'name' is a field in the user object
+            userElement.classList.add('user-item');
+            userElement.dataset.userId = user.id; // Storing the user ID for later use
+            userElement.id = "contact-" + user.id; // Unique ID for easy access
+            userElement.addEventListener('click', function() {
+                loadChat(user.id); // Load chat when a user is clicked
+            });
+            userList.appendChild(userElement);
+        });
+    }
+
+    // Function to load the chat for the selected user
+    function loadChat(userId) {
+        console.log('Selected user ID:', userId);
+        
+        // Emit custom event with user ID to load chat data
+        const chatEvent = new CustomEvent('userSelected', { detail: { userId } });
+        document.dispatchEvent(chatEvent);
+    }
+
+    // Fetch contacts when the page is loaded
+    fetchContacts();
+
+    // Listen for the custom 'userSelected' event to fetch and display chat data
+    document.addEventListener('userSelected', function(event) {
+        const userId = event.detail.userId;
+        console.log('User ID received in chat area:', userId);
+
+        // Fetch and load chat messages for the selected user
+        fetch(`/api/chats/${userId}/`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Chat data:', data);
+                updateChatArea(data); // Update the chat area with the data
+            })
+            .catch(error => {
+                console.error('Error loading chat:', error);
+                alert("An error occurred while loading chat.");
+            });
+    });
+
+    // Function to update the chat area with fetched chat data
+    function updateChatArea(chatData) {
+        chatArea.innerHTML = ''; // Clear existing content
+        chatData.messages.forEach(message => {
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message.text; // Assuming 'text' is a field in the message object
+            chatArea.appendChild(messageElement);
+        });
+    }
+});
+</script>
